@@ -41,14 +41,14 @@ env_prog = set()
 # Encode the constraint that each robot can only appear in one position
 env_unique = set()
 for r in range(1, num_robots + 1):
-    new_env_unique = '( ' + 'init' + str(r) + ' ) -> ( '
+    new_env_unique = '( ' + 'init' + str(r) + ' ) <-> ( '
     for p in env_vars_list[r - 1]:
         new_env_unique += '!' + p + ' && '
     new_env_unique = new_env_unique[:-3] + ')'
     env_unique |= {new_env_unique}
 for r in range(1, num_robots + 1):
     for i in range(len(env_vars_list[r - 1])):
-        new_env_unique = '( ' + env_vars_list[r - 1][i] + ' ) -> ( ' + '!' + 'init' + str(r)
+        new_env_unique = '( ' + env_vars_list[r - 1][i] + ' ) <-> ( ' + '!' + 'init' + str(r)
         for j in range(len(env_vars_list[r - 1])):
             if j != i:
                 new_env_unique += ' && !' + env_vars_list[r - 1][j]
@@ -125,7 +125,7 @@ for r in range(1, num_robots + 1):
     new_sys_nonstop += 'go' + str(r) + ' || '
 new_sys_nonstop = new_sys_nonstop[:-3] + ')'
 sys_stop |= {new_sys_nonstop}
-# sys_safe |= sys_stop  # not working
+sys_safe |= sys_stop  # not working
 
 # Encode the collision avoidance constraint
 sys_collision = set()  # A robot cannot go if the next position is currently occupied
@@ -185,16 +185,9 @@ sys_safe |= sys_collision_2
 # Create a GR(1) specification
 specs = spec.GRSpec(env_vars, sys_vars, env_init, sys_init,
                     env_safe, sys_safe, env_prog, sys_prog)
-specs.qinit = '\E \A'  # Moore initial condition synthesized too
-
-print(specs.env_vars)
-print(specs.env_init)
-print(specs.env_safety)
-print(specs.env_prog)
-print(specs.sys_vars)
-print(specs.sys_init)
-print(specs.sys_safety)
-print(specs.sys_prog)
+specs.qinit = '\A \E'  # Moore initial condition synthesized too
+specs.moore = False
+specs.plus_one = False
 
 print('Start synthesis')
 ctrl = synth.synthesize(specs)

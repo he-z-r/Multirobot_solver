@@ -12,6 +12,7 @@ from tulip.transys import machines
 from tulip import synth
 import State_encoding
 import LTL_encoding
+from tulip.interfaces import slugs
 
 # Workspace parameters
 num_rows = 3
@@ -113,7 +114,8 @@ for curr_state in range(num_states):
 # ([]<> [2], 2)
 # Constraint 3:
 # []! ([1], 1)
-ltl_formula_1 = LTL_encoding.cltl_conversion(np.array([6, 7, 8]), 2, num_robots, num_cells)
+ltl_formula_1 = LTL_encoding.cltl_conversion_async(np.array([6, 7, 8]), 2, num_robots, num_cells, 1)
+# ltl_formula_1 = 'loc=69'
 sys_prog |= {ltl_formula_1}
 for i in range(num_robots):
     ltl_formula_2 = LTL_encoding.ltl_conversion_ap(np.array([2]), i, num_robots, num_cells)
@@ -125,12 +127,17 @@ sys_safe |= {ltl_formula_3}
 specs = spec.GRSpec(env_vars, sys_vars, env_init, sys_init,
                     env_safe, sys_safe, env_prog, sys_prog)
 specs.qinit = '\E \A'  # Moore initial condition synthesized too
-
-ctrl = synth.synthesize(specs)
+specs.moore = False
+specs.plus_one = False
+# ctrl = slugs.synthesize(specs)
+slugs_specs = spec.translate(specs, 'slugs')
+print(specs.sys_vars)
+print(slugs_specs, file=open("out.slugs", "w"))
+ctrl = synth.synthesize(specs, solver="slugs")
 assert ctrl is not None, 'unrealizable'
 
 
 # Generate a graphical representation of the controller for viewing
-if not ctrl.save('gr1_set.png'):
-    print(ctrl)
-machines.random_run(ctrl, N=30)
+#if not ctrl.save('gr1_set.png'):
+#    print(ctrl)
+#machines.random_run(ctrl, N=30)

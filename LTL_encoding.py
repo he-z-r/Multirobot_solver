@@ -63,3 +63,40 @@ def ltl_conversion_ap(ap, robot_index, num_robots, num_cells):
     ltl_formula = ltl_formula[:-7]
     ltl_formula = ltl_formula + ')'
     return ltl_formula
+
+
+def cltl_conversion_async(ap, c, num_robots, num_cells, delay):
+    # Extended version of cltl_conversion function, consider asynchrony
+    # First generate outer logic
+    robots = np.arange(num_robots, dtype=int)
+    ap_tot = np.arange(num_cells, dtype=int)
+    temp_pos = np.zeros(num_robots, dtype=int)
+    ltl_formula = ''
+    for r in itertools.combinations(robots, c):
+        # this loop: the robots which need to satisfy constraints are fixed
+        rest_of_robots = np.copy(robots)
+        rest_of_robots = np.delete(rest_of_robots, np.asarray(r, dtype=int))
+        states = set()
+        for l in itertools.permutations(ap, c):
+            # this loop: locations of the chosen robots which need to satisfy constraints are fixed
+            for i in range(c):
+                temp_pos[r[i]] = l[i]
+            for rest_l in itertools.permutations(ap_tot, len(rest_of_robots)):
+                # this loop: locations of the unchosen robots are fixed (doesn't check validity of the locations,
+                # because it's already ensured by system dynamics)
+                for rest_i in range(num_robots - c):
+                    temp_pos[rest_of_robots[rest_i]] = rest_l[rest_i]
+                if len(np.unique(temp_pos)) == len(temp_pos):
+                    states.add(State_encoding.array2digit(temp_pos, num_cells))
+        ltl_partial_formula = '( loc='
+        for state in states:
+            ltl_partial_formula += str(state) + ' || loc='
+        ltl_partial_formula = ltl_partial_formula[:-7] + ')'
+        ltl_formula += '('
+        ltl_formula += ltl_partial_formula
+        for t in range(delay):
+            ltl_partial_formula = 'X' + ltl_partial_formula
+            ltl_formula += ' && ' + ltl_partial_formula
+        ltl_formula += ') || '
+    ltl_formula = ltl_formula[:-4]
+    return ltl_formula
