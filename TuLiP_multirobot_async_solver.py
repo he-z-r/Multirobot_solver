@@ -197,7 +197,7 @@ print(specs)
 specs.check_syntax()
 
 print('Start synthesis')
-ctrl = synth.synthesize(option='gr1c', specs)
+ctrl = synth.synthesize_many(specs)
 print('End synthesis')
 assert ctrl is not None, 'unrealizable'
 
