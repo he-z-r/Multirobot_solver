@@ -70,15 +70,17 @@ for r in range(1, num_robots + 1):
                       + ' || ' + env_vars_list[r - 1][i + 1] + ' )'}
         env_trans |= {'( ' + env_vars_list[r - 1][i] + ' && ' + '!go' + str(r) + ' ) -> X( ' + env_vars_list[r - 1][i]
                       + ' )'}
+    env_trans |= {'( ' + env_vars_list[r - 1][i + 1] + ' ) -> X( ' + env_vars_list[r - 1][i+1]
+                  + ' )'}
 env_safe |= env_trans
 
-# Encode the constraint that every robot should reach its destination and stay
-env_dest = set()
-sys_dest_stop = set()
-for r in range(1, num_robots + 1):
-    env_dest |= {'( ' + env_vars_list[r - 1][-1] + ' ) -> X( ' + env_vars_list[r - 1][-1] + ' )'}
-    sys_dest_stop |= {env_vars_list[r - 1][-1]}
-env_safe |= env_dest
+# Encode the constraint that each robot should either not go or eventually not in the current cell
+# env_go = set()
+# for r in range(1, num_robots + 1):
+#    env_go |= {'( init' + str(r) + ' && go' + str(r) + ' && X(!init' + str(r) +') )'}
+#    for i in range(len(env_vars_list[r - 1]) - 1):
+#        env_go |= {'(' + env_vars_list[r - 1][i] + ' && ' + 'go' + str(r) + ' && X(!'+ env_vars_list[r - 1][i]+ ') )'}
+# env_prog |= env_go
 
 # Encode the constraint that each robot should either not go or eventually not in the current cell
 env_go = set()
@@ -95,22 +97,14 @@ for r in range(1, num_robots + 1):
 
 # Define initial command. Now assume each robot is stopped at the beginning
 sys_init = set()
-# for r in range(1, num_robots + 1):
-#     sys_init |= {'!go' + str(r)}
 
 sys_safe = set()
 sys_prog = set()
-'''
-dest_stop_str = ''
-for i in sys_dest_stop:
-    dest_stop_str += i + ' && '
-dest_stop_str = dest_stop_str[:-4]
-spec_dest = gr1_fragment.stability_to_gr1(dest_stop_str, 'dest_aux')
-sys_vars |= {'dest_aux'}
-sys_init |= set(spec_dest.sys_init)
-sys_safe |= set(spec_dest.sys_safety)
-sys_prog |= set(spec_dest.sys_prog)
-'''
+
+# Encode the constraint that every robot should reach its destination
+sys_dest_stop = set()
+for r in range(1, num_robots + 1):
+    sys_dest_stop |= {env_vars_list[r - 1][-1]}
 sys_prog |= sys_dest_stop  # not working
 
 # Encode the constraint that if ending point is reached, not go. And if ending point is not reached, always exist some
@@ -125,7 +119,7 @@ for r in range(1, num_robots + 1):
     new_sys_nonstop += 'go' + str(r) + ' || '
 new_sys_nonstop = new_sys_nonstop[:-3] + ')'
 sys_stop |= {new_sys_nonstop}
-sys_safe |= sys_stop  # not working
+# sys_safe |= sys_stop  # not working
 
 # Encode the collision avoidance constraint
 sys_collision = set()  # A robot cannot go if the next position is currently occupied
@@ -155,7 +149,7 @@ for r in range(1, num_robots + 1):
         if collision_possible:
             new_sys_collision = new_sys_collision[:-3] + ') ) -> !go' + str(r)
             sys_collision |= {new_sys_collision}
-sys_safe |= sys_collision
+# sys_safe |= sys_collision
 
 sys_collision_2 = set()  # If 2 robots are going to the same cell theoretically at the next timestamp,
 # at least one should not go
@@ -180,7 +174,9 @@ for cell in range(1, num_cells + 1):
                         new_sys_collision_2 += env_vars_list[other_r - 1][index_2 - 1] + ' )'
                     new_sys_collision_2 += ' -> (!go' + str(r) + ' || ' + '!go' + str(other_r) + ' )'
                     sys_collision_2 |= {new_sys_collision_2}
-sys_safe |= sys_collision_2
+# sys_safe |= sys_collision_2
+sys_col_simple = {'!(s1a2a1 && s2a2a1)'}
+sys_safe |= sys_col_simple
 
 # Create a GR(1) specification
 specs = spec.GRSpec(env_vars, sys_vars, env_init, sys_init,
@@ -194,9 +190,9 @@ ctrl = synth.synthesize(specs)
 print('End synthesis')
 assert ctrl is not None, 'unrealizable'
 
-'''
+
 # Generate a graphical representation of the controller for viewing
 if not ctrl.save('gr1_set_1111.png'):
     print(ctrl)
 machines.random_run(ctrl, N=30)
-'''
+
