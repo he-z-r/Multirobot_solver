@@ -1,0 +1,10 @@
+num_states = 5;
+num_robots = 3;
+transition = zeros(4, num_states);
+transition(1, :) = [1,4,3,4,2];
+transition(2, :) = [1,5,3,2,5];
+transition(3, :) = [1,1,2,4,5];
+transition(4, :) = [2,3,3,4,5];
+init = [1 4 5];
+dest = [4 3 1];
+[W, Cv, Cont, time] = multirobot_coord(num_states, num_robots, transition, init, dest, true);
